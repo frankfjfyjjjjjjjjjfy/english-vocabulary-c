@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#173b57">
+<title>有聲英文單字書</title>
+<style>
+:root{--navy:#173b57;--blue:#2876a5;--pale:#eef5f8;--ink:#172b3a;--muted:#637785;--line:#dce6eb}
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6f8;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+header{background:var(--navy);color:white;padding:22px 18px 18px;padding-top:calc(22px + env(safe-area-inset-top))}
+header h1{font-size:23px;margin:0 0 5px}
+header p{margin:0;color:#d8e7ef;font-size:13px}
+main{max-width:680px;margin:auto;padding:14px 14px calc(30px + env(safe-area-inset-bottom))}
+.toolbar{display:flex;gap:8px;margin-bottom:12px}
+input{min-width:0;flex:1;border:1px solid var(--line);border-radius:12px;padding:13px;font-size:16px;background:white}
+select{border:1px solid var(--line);border-radius:12px;padding:8px;background:white;color:var(--ink);font-size:14px}
+.card{background:white;border:1px solid var(--line);border-radius:18px;padding:19px;box-shadow:0 5px 18px #173b570d}
+.count{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.word{font-size:30px;font-weight:750;margin:12px 0 5px;overflow-wrap:anywhere}
+.meaning{font-size:16px;line-height:1.6;color:#315267}
+.label{font-size:12px;letter-spacing:.08em;color:var(--muted);font-weight:700;margin:22px 0 7px}
+.example{font-size:18px;line-height:1.55}
+.translation{font-size:16px;line-height:1.6;color:#315267}
+button{border:0;border-radius:12px;padding:12px 14px;font-size:15px;font-weight:650;cursor:pointer}
+[hidden]{display:none!important}.word-line{display:flex;align-items:center;gap:8px}.word-line .word{flex:1}.star-btn{font-size:27px;padding:4px 12px;background:#fff4cf;color:#9a6a00;border:1px solid #f0d98d}.star-btn.saved{background:#ffedaa}
+.study-tools{margin:12px 0 16px}.quiz{margin-bottom:16px}.quiz-question{font-size:14px;color:var(--muted);margin:14px 0 5px}.quiz-word{font-size:27px;font-weight:800;margin-bottom:14px}.choices{display:grid;gap:8px}.choice{width:100%;text-align:left;background:#f3f7fa;color:var(--ink);border:1px solid var(--line)}.choice.correct{background:#e3f5e9;border-color:#65ae7b}.choice.wrong{background:#fde8e7;border-color:#d77a74}.choice:disabled{opacity:1}.quiz-feedback{min-height:28px;margin-top:12px;font-weight:700}.quiz-feedback.good{color:#287747}.quiz-feedback.bad{color:#a43b35}.quiz-end{text-align:center;font-size:21px;font-weight:800;padding:18px 0}
+.primary{background:var(--blue);color:white}
+.secondary{background:var(--pale);color:var(--navy)}
+.audio-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.audio-row button{flex:1;min-width:125px}
+.nav{display:flex;gap:10px;margin-top:12px}
+.nav button{flex:1}
+.progress{height:6px;background:#e4ebef;border-radius:10px;margin:14px 0 0;overflow:hidden}
+.progress span{display:block;height:100%;background:var(--blue);width:0}
+.hint{font-size:12px;line-height:1.5;color:var(--muted);margin:13px 2px}
+.list-title{font-size:14px;font-weight:700;margin:22px 2px 9px}
+.list{display:grid;gap:7px}
+.item{display:flex;align-items:center;gap:10px;text-align:left;background:white;border:1px solid var(--line);color:var(--ink);padding:11px 13px;border-radius:12px}
+.item span:first-child{font-weight:700;flex:1}
+.item small{color:var(--muted);font-size:12px}
+.item.active{border-color:var(--blue);background:#edf6fb}
+@media(min-width:560px){.word{font-size:36px}.card{padding:25px}}
+</style>
+</head>
+<body>
+<header><h1>🔊 有聲英文單字書</h1><p id="subtitle">145 個單字與片語｜英文發音・中文意思・例句</p></header>
+<main>
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="搜尋英文或中文意思…" aria-label="搜尋單字">
+    <select id="voiceRate" aria-label="語速"><option value="0.75">慢速</option><option value="0.9" selected>正常</option><option value="1.05">稍快</option></select>
+  </div>
+  <div class="audio-row study-tools">
+    <button class="secondary" onclick="setListMode('all')">📚 全部單字</button>
+    <button class="secondary" onclick="setListMode('starred')">⭐ 我的星號</button>
+    <button class="primary" onclick="startQuiz()">📝 隨堂小考</button>
+  </div>
+  <section class="card quiz" id="quizPanel" hidden>
+    <div class="count"><span id="quizProgress">第 1 題</span><span id="quizScore">答對 0 題</span></div>
+    <div class="quiz-question" id="quizQuestion">請選出中文意思：</div>
+    <div class="quiz-word" id="quizWord"></div>
+    <div class="choices" id="quizChoices"></div>
+    <div class="quiz-feedback" id="quizFeedback" aria-live="polite"></div>
+    <div class="audio-row"><button class="secondary" onclick="speakQuizWord()">🔊 聽發音</button><button class="primary" id="quizNext" onclick="nextQuiz()" disabled>下一題 →</button></div>
+    <button class="secondary" onclick="closeQuiz()" style="width:100%;margin-top:10px">結束小考</button>
+  </section>
+  <section class="card">
+    <div class="count"><span id="counter">第 1 個</span><span id="total">共 145 個</span></div>
+    <div class="word-line"><div class="word" id="word"></div><button class="star-btn" id="starBtn" onclick="toggleStar()" aria-label="加入星號">☆</button></div>
+    <div class="meaning" id="meaning"></div>
+    <div class="audio-row">
+      <button class="primary" onclick="speakWord()">🔊 聽單字（唸兩次）</button>
+      <button class="secondary" onclick="speakExample()">▶ 聽英文例句</button>
+    </div>
+    <div class="label">英文例句</div>
+    <div class="example" id="example"></div>
+    <div class="label">例句中文</div>
+    <div class="translation" id="translation"></div>
+    <div class="audio-row">
+      <button class="secondary" onclick="speakMeaning()">🔊 聽中文意思</button>
+      <button class="secondary" onclick="speakTranslation()">🔊 聽中文例句</button>
+    </div>
+    <div class="progress"><span id="bar"></span></div>
+    <div class="nav">
+      <button class="secondary" onclick="move(-1)">← 上一個</button>
+      <button class="primary" onclick="move(1)">下一個 →</button>
+    </div>
+  </section>
+  <p class="hint">發音使用手機或瀏覽器內建語音。第一次播放若沒有聲音，請確認手機沒有靜音，並稍等語音載入。語音種類會依你的手機設定而不同。</p>
+  <div class="list-title">單字列表（點選可跳到該單字）</div>
+  <div class="list" id="list"></div>
+</main>
+<script>
+const words = [{"word": "abolish", "meaning": "v. 廢除；取消", "example": "The government decided to abolish the old law.", "translation": "政府決定廢除舊法律。"}, {"word": "abrupt", "meaning": "adj. 突然的；唐突的", "example": "The meeting came to an abrupt end.", "translation": "會議突然結束了。"}, {"word": "accelerate", "meaning": "v. 加速；促進", "example": "The car began to accelerate.", "translation": "汽車開始加速。"}, {"word": "accord", "meaning": "n. 協議；一致；v. 達成一致", "example": "The two sides reached an accord after hours of discussion.", "translation": "雙方經過數小時討論後達成協議。"}, {"word": "acknowledge", "meaning": "v. 承認；確認收到；致謝", "example": "She acknowledged her mistake.", "translation": "她承認了自己的錯誤。"}, {"word": "administration", "meaning": "n. 管理；行政部門；政府", "example": "The administration announced new measures.", "translation": "政府宣布了新措施。"}, {"word": "affection", "meaning": "n. 喜愛；愛慕；感情", "example": "He showed great affection for his family.", "translation": "他對家人表現出深厚的感情。"}, {"word": "attorney", "meaning": "n. 律師", "example": "The attorney explained the contract.", "translation": "律師解釋了這份合約。"}, {"word": "authorize", "meaning": "v. 授權；批准", "example": "Only the director can authorize the purchase.", "translation": "只有主管能批准這項採購。"}, {"word": "banner", "meaning": "n. 布條；旗幟；橫幅", "example": "A banner hung above the entrance.", "translation": "入口上方掛著一面橫幅。"}, {"word": "batch", "meaning": "n. 一批；一組；v. 分批處理", "example": "She baked a batch of cookies for the class.", "translation": "她為全班烤了一批餅乾。"}, {"word": "be comprised of", "meaning": "片語 由……組成（常用：be composed of）", "example": "The committee is comprised of five members.", "translation": "這個委員會由五名成員組成。"}, {"word": "blush", "meaning": "v./n. 臉紅；泛紅", "example": "She began to blush when he complimented her.", "translation": "他稱讚她時，她開始臉紅。"}, {"word": "boredom", "meaning": "n. 無聊；厭倦", "example": "Reading helped him escape boredom.", "translation": "閱讀幫助他擺脫無聊。"}, {"word": "bureau", "meaning": "n. 局；處；辦公室", "example": "Contact the travel bureau for information.", "translation": "請聯絡旅遊局取得資訊。"}, {"word": "canvas", "meaning": "n. 帆布；畫布", "example": "The artist stretched the canvas before painting.", "translation": "畫家在作畫前先把畫布繃好。"}, {"word": "characterize", "meaning": "v. 描述……的特徵；以……為特點", "example": "The region is characterized by cold winters.", "translation": "這個地區以寒冷的冬季為特色。"}, {"word": "chubby", "meaning": "adj. 圓胖的；胖嘟嘟的", "example": "The baby has chubby cheeks.", "translation": "這個寶寶有圓嘟嘟的臉頰。"}, {"word": "clarity", "meaning": "n. 清楚；清晰；明確", "example": "The teacher explained the idea with great clarity.", "translation": "老師非常清楚地解釋了這個想法。"}, {"word": "commission", "meaning": "n. 委員會；佣金；委託；v. 委託", "example": "The commission will review the proposal.", "translation": "委員會將審查這項提案。"}, {"word": "commitment", "meaning": "n. 承諾；投入", "example": "Learning a language takes time and commitment.", "translation": "學習語言需要時間與投入。"}, {"word": "communist", "meaning": "n./adj. 共產主義者；共產主義的", "example": "He studied the history of communist movements.", "translation": "他研究了共產主義運動的歷史。"}, {"word": "compensate", "meaning": "v. 補償；賠償", "example": "The company will compensate workers for the loss.", "translation": "公司將補償員工的損失。"}, {"word": "competent", "meaning": "adj. 有能力的；稱職的", "example": "She is a competent engineer.", "translation": "她是一位稱職的工程師。"}, {"word": "component", "meaning": "n. 零件；組成部分；adj. 組成的", "example": "Trust is an important component of friendship.", "translation": "信任是友誼的重要組成部分。"}, {"word": "compound", "meaning": "n. 化合物；複合物；院落；v. 加重；使惡化", "example": "Water is a chemical compound made of hydrogen and oxygen.", "translation": "水是由氫和氧組成的化合物。"}, {"word": "concede", "meaning": "v. 承認；讓步；認輸", "example": "He had to concede that her argument was correct.", "translation": "他不得不承認她的論點是正確的。"}, {"word": "conceive", "meaning": "v. 想像；構思；懷孕", "example": "She conceived a plan to help the community.", "translation": "她構思了一個幫助社區的計畫。"}, {"word": "condemn", "meaning": "v. 譴責；判處；宣告不適用", "example": "The leaders condemned the attack.", "translation": "領導人譴責了這次攻擊。"}, {"word": "confession", "meaning": "n. 坦白；供認；告白", "example": "His confession surprised everyone in the room.", "translation": "他的坦白讓房間裡的每個人都很驚訝。"}, {"word": "contemplate", "meaning": "v. 深思；仔細考慮；凝視", "example": "She is contemplating a career in engineering.", "translation": "她正在仔細考慮從事工程相關的職業。"}, {"word": "contend", "meaning": "v. 主張；競爭；搏鬥", "example": "They contend that the policy is unfair.", "translation": "他們主張這項政策不公平。"}, {"word": "convert", "meaning": "v. 轉換；改變；使皈依", "example": "We need to convert the file to PDF.", "translation": "我們需要把檔案轉換成 PDF。"}, {"word": "convict", "meaning": "v. 判定有罪；n. 已定罪者", "example": "The jury convicted him of theft.", "translation": "陪審團判定他犯有竊盜罪。"}, {"word": "corridor", "meaning": "n. 走廊；通道", "example": "She walked down the corridor.", "translation": "她沿著走廊走去。"}, {"word": "crystal", "meaning": "n. 水晶；晶體", "example": "The sunlight shone through the crystal.", "translation": "陽光穿過水晶照了進來。"}, {"word": "curriculum", "meaning": "n. 課程；課程綱要", "example": "The school updated its science curriculum.", "translation": "學校更新了科學課程。"}, {"word": "deficit", "meaning": "n. 赤字；不足；缺乏", "example": "The company is trying to reduce its budget deficit.", "translation": "這家公司正努力降低預算赤字。"}, {"word": "descend", "meaning": "v. 下降；下來；降臨；遺傳", "example": "The hikers began to descend the mountain before sunset.", "translation": "登山客在日落前開始下山。"}, {"word": "dimension", "meaning": "n. 尺寸；維度；方面", "example": "Measure the dimensions of the box.", "translation": "量一下盒子的尺寸。"}, {"word": "diplomatic", "meaning": "adj. 外交的；圓滑的", "example": "She has strong diplomatic skills.", "translation": "她具有很好的外交技巧。"}, {"word": "doctrine", "meaning": "n. 教義；學說；信條", "example": "The book explains the central doctrine.", "translation": "這本書解釋了核心教義。"}, {"word": "embrace", "meaning": "v./n. 擁抱；接受", "example": "We should embrace new opportunities.", "translation": "我們應該把握並接受新的機會。"}, {"word": "erect", "meaning": "v. 建立；豎立；adj. 直立的", "example": "They erected a statue in the park.", "translation": "他們在公園裡豎立了一座雕像。"}, {"word": "estate", "meaning": "n. 財產；地產；莊園", "example": "She inherited a large estate.", "translation": "她繼承了一大筆財產。"}, {"word": "eternal", "meaning": "adj. 永恆的；永久的", "example": "Their love seemed eternal.", "translation": "他們的愛似乎是永恆的。"}, {"word": "exclaim", "meaning": "v. 驚叫；呼喊；大聲說", "example": "“That is amazing!” she exclaimed.", "translation": "「那真是太棒了！」她驚呼道。"}, {"word": "extraordinary", "meaning": "adj. 非凡的；特別的；意想不到的", "example": "She showed extraordinary courage.", "translation": "她展現了非凡的勇氣。"}, {"word": "fabric", "meaning": "n. 布料；織物；結構", "example": "This fabric is soft and comfortable.", "translation": "這種布料柔軟又舒適。"}, {"word": "faculty", "meaning": "n. 學院；全體教職員；能力", "example": "She teaches in the faculty of law.", "translation": "她在法學院任教。"}, {"word": "fascinate", "meaning": "v. 使著迷；深深吸引", "example": "Space exploration has always fascinated him.", "translation": "太空探索一直讓他著迷。"}, {"word": "federal", "meaning": "adj. 聯邦的；聯邦制的", "example": "The federal government announced a new policy.", "translation": "聯邦政府宣布了一項新政策。"}, {"word": "foul", "meaning": "adj. 犯規的；惡臭的；v. 弄髒；n. 犯規", "example": "The player committed a foul.", "translation": "那名球員犯規了。"}, {"word": "fraction", "meaning": "n. 分數；一小部分", "example": "Only a fraction of the people attended.", "translation": "只有一小部分人出席。"}, {"word": "freight", "meaning": "n. 貨物；貨運；運費", "example": "The goods were sent by freight.", "translation": "這些貨物以貨運方式寄送。"}, {"word": "frontier", "meaning": "n. 邊境；（知識等的）前沿", "example": "Scientists are exploring a new frontier.", "translation": "科學家正在探索新的領域前沿。"}, {"word": "gross", "meaning": "adj. 討厭的；令人噁心的；總的；n. 毛額", "example": "That smell is gross.", "translation": "那個味道很噁心。"}, {"word": "housing", "meaning": "n. 住房；住宅供應；外殼；機殼", "example": "The city is building more affordable housing.", "translation": "這座城市正在興建更多可負擔的住宅。"}, {"word": "impulse", "meaning": "n. 衝動；脈衝；推動力", "example": "Buying it was an impulse decision.", "translation": "買下它是一時衝動的決定。"}, {"word": "integrity", "meaning": "n. 誠信；正直；完整性", "example": "She is respected for her integrity.", "translation": "她因為正直而受到尊敬。"}, {"word": "interval", "meaning": "n. 間隔；幕間休息；區間", "example": "There was a short interval between the two classes.", "translation": "兩堂課之間有一小段休息時間。"}, {"word": "lest", "meaning": "conj. 以免；唯恐", "example": "Write down the address lest you forget it.", "translation": "把地址寫下來，以免忘記。"}, {"word": "mattress", "meaning": "n. 床墊", "example": "The new mattress is more comfortable.", "translation": "這張新床墊比較舒適。"}, {"word": "mechanism", "meaning": "n. 機制；機械裝置", "example": "Scientists are studying the mechanism of the disease.", "translation": "科學家正在研究這種疾病的作用機制。"}, {"word": "meddle", "meaning": "v. 干涉；插手", "example": "Please don't meddle in their affairs.", "translation": "請不要插手他們的事情。"}, {"word": "memo", "meaning": "n. 備忘錄", "example": "I sent a memo to the team.", "translation": "我寄了一份備忘錄給團隊。"}, {"word": "metropolitan", "meaning": "adj. 大都市的；首都圈的", "example": "The metropolitan area has an extensive subway system.", "translation": "這個大都市區有完善的捷運系統。"}, {"word": "midst", "meaning": "n. 中間；當中", "example": "She stayed calm in the midst of the confusion.", "translation": "在一片混亂之中，她仍保持冷靜。"}, {"word": "miniature", "meaning": "adj. 微型的；小型的；n. 微縮模型", "example": "He built a miniature model of an airplane.", "translation": "他製作了一架飛機的微縮模型。"}, {"word": "mumble", "meaning": "v. 含糊地說；咕噥；n. 含糊的話", "example": "He mumbled an apology and left the room.", "translation": "他含糊地道歉後便離開房間。"}, {"word": "municipal", "meaning": "adj. 市政的；市政府的", "example": "The municipal government repaired the road.", "translation": "市政府修好了這條道路。"}, {"word": "neutral", "meaning": "adj. 中立的；中性的", "example": "The country remained neutral during the conflict.", "translation": "該國在衝突期間保持中立。"}, {"word": "notion", "meaning": "n. 概念；想法；觀念", "example": "I had no notion that he was ill.", "translation": "我完全不知道他生病了。"}, {"word": "obligation", "meaning": "n. 義務；責任", "example": "Students have an obligation to follow the rules.", "translation": "學生有遵守規定的義務。"}, {"word": "patent", "meaning": "n. 專利；adj. 明顯的；v. 取得專利", "example": "She applied for a patent for her invention.", "translation": "她為自己的發明申請專利。"}, {"word": "patrol", "meaning": "v./n. 巡邏；巡邏隊", "example": "Police officers patrol the neighborhood at night.", "translation": "警察晚上會在社區巡邏。"}, {"word": "plunge", "meaning": "v. 投入；猛跌；驟降；n. 跳入；驟降", "example": "The temperature may plunge tonight.", "translation": "今晚氣溫可能會驟降。"}, {"word": "poetic", "meaning": "adj. 詩意的；富有詩意的", "example": "He used poetic language in his speech.", "translation": "他在演講中使用了富有詩意的語言。"}, {"word": "poke", "meaning": "v. 戳；捅；探出；n. 戳；捅", "example": "He poked the box gently to see what was inside.", "translation": "他輕輕戳了戳盒子，想看看裡面有什麼。"}, {"word": "porch", "meaning": "n. 門廊；走廊（房屋入口處）", "example": "He sat on the porch and read a book.", "translation": "他坐在門廊上看書。"}, {"word": "preliminary", "meaning": "adj. 初步的；預備的；n. 初步措施", "example": "The team conducted a preliminary test before the main experiment.", "translation": "團隊在正式實驗前進行了初步測試。"}, {"word": "prevail", "meaning": "v. 盛行；獲勝；占上風", "example": "Justice will eventually prevail.", "translation": "正義終將獲勝。"}, {"word": "prey", "meaning": "n. 獵物；捕食", "example": "The eagle watched its prey from above.", "translation": "老鷹從上方注視著牠的獵物。"}, {"word": "prospect", "meaning": "n. 前景；可能性；景象", "example": "The job offers good career prospects.", "translation": "這份工作有很好的職涯前景。"}, {"word": "province", "meaning": "n. 省；（某些國家的）行政區", "example": "She lives in a northern province.", "translation": "她住在北部的一個省。"}, {"word": "pyramid", "meaning": "n. 金字塔；錐體", "example": "The ancient pyramid attracts many visitors.", "translation": "這座古老的金字塔吸引許多遊客。"}, {"word": "radiation", "meaning": "n. 輻射；放射線", "example": "Workers wore protection against radiation.", "translation": "工作人員穿戴防護裝備以防輻射。"}, {"word": "ragged", "meaning": "adj. 破爛的；衣衫襤褸的；參差不齊的", "example": "He wore a ragged coat.", "translation": "他穿著一件破舊的外套。"}, {"word": "ranch", "meaning": "n. 牧場", "example": "His family owns a ranch in the countryside.", "translation": "他的家人在鄉下有一座牧場。"}, {"word": "realm", "meaning": "n. 領域；範圍；王國", "example": "Artificial intelligence is changing the realm of education.", "translation": "人工智慧正在改變教育領域。"}, {"word": "rear", "meaning": "n. 後部；adj. 後面的；v. 養育", "example": "The car was damaged at the rear.", "translation": "這輛車的後部受損了。"}, {"word": "regardless", "meaning": "adv. 不管；不顧", "example": "We will continue regardless of the difficulties.", "translation": "不管遇到什麼困難，我們都會繼續。"}, {"word": "render", "meaning": "v. 使成為；提供；呈現；翻譯", "example": "The decision rendered him unable to work.", "translation": "這個決定使他無法工作。"}, {"word": "resume", "meaning": "v. 重新開始；繼續；n. 履歷（résumé）", "example": "The meeting will resume after lunch.", "translation": "會議將在午餐後繼續。"}, {"word": "ridge", "meaning": "n. 山脊；隆起", "example": "They walked along the mountain ridge.", "translation": "他們沿著山脊行走。"}, {"word": "sacred", "meaning": "adj. 神聖的；不可侵犯的", "example": "The mountain is sacred to local people.", "translation": "這座山對當地人而言是神聖的。"}, {"word": "saddle", "meaning": "n. 馬鞍；v. 使負擔（責任等）", "example": "The horse has a new saddle.", "translation": "這匹馬有一個新馬鞍。"}, {"word": "scenario", "meaning": "n. 情境；局面；可能發生的情況", "example": "We prepared for the worst-case scenario.", "translation": "我們為最糟的情況做好準備。"}, {"word": "scheme", "meaning": "n. 計畫；方案；陰謀", "example": "They introduced a new recycling scheme.", "translation": "他們推出了一項新的回收計畫。"}, {"word": "scramble", "meaning": "v. 爬行；倉促行動；攪亂；n. 混亂；爭搶", "example": "They scrambled up the rocky hill.", "translation": "他們手腳並用地爬上岩石山。"}, {"word": "segment", "meaning": "n. 部分；片段；區段；v. 分割", "example": "The final segment of the program was about science.", "translation": "節目的最後一個部分是關於科學的。"}, {"word": "senator", "meaning": "n. 參議員", "example": "The senator spoke at the meeting.", "translation": "這位參議員在會議上發言。"}, {"word": "sentiment", "meaning": "n. 情感；觀點；情緒", "example": "Public sentiment began to change.", "translation": "公眾情緒開始轉變。"}, {"word": "sequence", "meaning": "n. 順序；序列；v. 按順序排列", "example": "Put the steps in the correct sequence.", "translation": "請把步驟按正確順序排列。"}, {"word": "session", "meaning": "n. 會議；一節課；期間", "example": "The training session lasted two hours.", "translation": "訓練課程持續了兩個小時。"}, {"word": "Sheriff", "meaning": "n.（美國）郡治安官；警長", "example": "The sheriff spoke to the residents about road safety.", "translation": "郡治安官向居民宣導道路安全。"}, {"word": "smash", "meaning": "v. 打碎；撞擊；猛力擊打；n. 破碎聲", "example": "The ball smashed the window.", "translation": "球把窗戶打破了。"}, {"word": "sophisticated", "meaning": "adj. 複雜精密的；老練的；高雅的", "example": "The device uses sophisticated technology.", "translation": "這台裝置使用精密的技術。"}, {"word": "specialist", "meaning": "n. 專家；專科醫師", "example": "You should consult a heart specialist.", "translation": "你應該諮詢心臟專科醫師。"}, {"word": "spectator", "meaning": "n. 觀眾；旁觀者", "example": "Thousands of spectators watched the race.", "translation": "數千名觀眾觀看了這場比賽。"}, {"word": "sponsor", "meaning": "n. 贊助者；主辦者；v. 贊助；發起", "example": "A local company sponsored the event.", "translation": "一家當地公司贊助了這項活動。"}, {"word": "sprint", "meaning": "v. 短距離全力奔跑；n. 衝刺", "example": "He had to sprint to catch the bus.", "translation": "他必須衝刺才能趕上公車。"}, {"word": "stain", "meaning": "n. 污漬；污點；v. 弄髒；染色", "example": "There is a stain on my shirt.", "translation": "我的襯衫上有一個污漬。"}, {"word": "stake", "meaning": "n. 樁；賭注；利害關係", "example": "There is a lot at stake in this decision.", "translation": "這個決定關係重大。"}, {"word": "startle", "meaning": "v. 使吃驚；使嚇一跳", "example": "A loud noise startled the students.", "translation": "一聲巨響把學生們嚇了一跳。"}, {"word": "statistical", "meaning": "adj. 統計的；統計學的", "example": "The report includes statistical data.", "translation": "這份報告包含統計資料。"}, {"word": "stew", "meaning": "n. 燉菜；v. 燉煮；焦慮不安", "example": "We had beef stew for dinner.", "translation": "我們晚餐吃了燉牛肉。"}, {"word": "storage", "meaning": "n. 儲存；存放；儲存空間", "example": "The device has plenty of storage.", "translation": "這台裝置有充足的儲存空間。"}, {"word": "straighten", "meaning": "v. 使變直；整理；釐清", "example": "Please straighten the picture on the wall.", "translation": "請把牆上的畫掛正。"}, {"word": "strain", "meaning": "n. 壓力；拉傷；品種；v. 拉緊；使緊張", "example": "Too much work can cause stress and strain.", "translation": "工作過量會造成壓力與緊繃。"}, {"word": "stumble", "meaning": "v. 絆倒；踉蹌；結結巴巴", "example": "He stumbled on the uneven path.", "translation": "他在不平的路上絆了一下。"}, {"word": "submit", "meaning": "v. 提交；屈服；順從", "example": "Please submit your report by Friday.", "translation": "請在星期五前提交報告。"}, {"word": "substitute", "meaning": "n. 代替者；替代品；v. 代替", "example": "You can substitute honey for sugar.", "translation": "你可以用蜂蜜代替糖。"}, {"word": "suburban", "meaning": "adj. 郊區的；近郊的", "example": "They moved to a quiet suburban neighborhood.", "translation": "他們搬到一個安靜的郊區社區。"}, {"word": "supreme", "meaning": "adj. 最高的；至高無上的", "example": "The court is the supreme legal authority.", "translation": "該法院是最高司法機關。"}, {"word": "surplus", "meaning": "n. 過剩；盈餘；adj. 多餘的", "example": "The store donated its surplus food to a shelter.", "translation": "商店把多餘的食物捐給收容所。"}, {"word": "suspend", "meaning": "v. 暫停；中止；吊銷；懸掛", "example": "The school decided to suspend classes.", "translation": "學校決定停課。"}, {"word": "swap", "meaning": "v. 交換；互換；n. 交換", "example": "The students decided to swap seats.", "translation": "學生們決定交換座位。"}, {"word": "thrust", "meaning": "v./n. 猛推；推力", "example": "The engine produces enough thrust to move the aircraft forward.", "translation": "引擎產生足夠的推力讓飛機向前移動。"}, {"word": "tile", "meaning": "n. 瓷磚；瓦片；方格；v. 鋪瓷磚", "example": "They used blue tiles in the kitchen.", "translation": "他們在廚房使用藍色瓷磚。"}, {"word": "trait", "meaning": "n. 特徵；特質；特性", "example": "Patience is an important trait for a scientist.", "translation": "耐心是科學家很重要的特質。"}, {"word": "treaty", "meaning": "n. 條約；協定", "example": "The two countries signed a peace treaty.", "translation": "兩國簽署了一項和平條約。"}, {"word": "triple", "meaning": "adj. 三倍的；v. 使增加三倍；n. 三倍", "example": "The number of visitors tripled last year.", "translation": "去年訪客人數增加了三倍。"}, {"word": "undergo", "meaning": "v. 經歷；接受（手術、訓練等）", "example": "He will undergo surgery next week.", "translation": "他下週將接受手術。"}, {"word": "undertake", "meaning": "v. 承擔；著手進行；保證", "example": "She agreed to undertake the project.", "translation": "她同意承擔這個專案。"}, {"word": "unprecedented", "meaning": "adj. 前所未有的", "example": "The country faced an unprecedented crisis.", "translation": "這個國家面臨前所未有的危機。"}, {"word": "utility", "meaning": "n. 效用；公用事業", "example": "The storm damaged several utility lines.", "translation": "暴風雨損壞了幾條公共設施管線。"}, {"word": "vague", "meaning": "adj. 模糊的；不明確的", "example": "His answer was vague.", "translation": "他的回答很模糊。"}, {"word": "vein", "meaning": "n. 靜脈；葉脈；礦脈", "example": "The doctor examined the vein in his arm.", "translation": "醫生檢查了他手臂上的靜脈。"}, {"word": "versus", "meaning": "prep. 對；與……相對", "example": "Tonight's game is Taiwan versus Japan.", "translation": "今晚的比賽是台灣對日本。"}, {"word": "veteran", "meaning": "n. 老兵；資深人士；adj. 經驗豐富的", "example": "She is a veteran teacher.", "translation": "她是一位資深教師。"}, {"word": "virtual", "meaning": "adj. 虛擬的；實質上的", "example": "We attended a virtual meeting.", "translation": "我們參加了一場線上會議。"}, {"word": "weird", "meaning": "adj. 奇怪的；詭異的", "example": "That was a weird dream.", "translation": "那是一個奇怪的夢。"}, {"word": "worship", "meaning": "v. 崇拜；敬拜；n. 崇拜；敬拜", "example": "Many people worship at the temple.", "translation": "許多人在寺廟裡敬拜。"}, {"word": "yield", "meaning": "v. 產生；讓步；屈服；n. 產量；收益", "example": "This tree yields delicious fruit.", "translation": "這棵樹會結出美味的水果。"}];
+let index=0, filtered=words.map((_,i)=>i);
+const $=id=>document.getElementById(id);
+function render(){
+ const w=words[filtered[index]];
+ if(!w){$('word').textContent='找不到符合的單字';$('meaning').textContent='請試試其他搜尋字';$('example').textContent='';$('translation').textContent='';$('counter').textContent='';$('bar').style.width='0';return}
+ $('word').textContent=w.word;
+ $('meaning').textContent=w.meaning;
+ $('example').textContent=w.example;
+ $('translation').textContent=w.translation;
+ $('counter').textContent=`第 ${index+1} 個`;
+ $('total').textContent=`目前顯示 ${filtered.length} 個／總共 ${words.length} 個`;
+ $('bar').style.width=((index+1)/filtered.length*100)+'%';
+ updateStarButton();
+ document.querySelectorAll('.item').forEach((el,i)=>el.classList.toggle('active',i===index));
+}
+function speak(text,lang){
+ if(!('speechSynthesis' in window)){alert('你的瀏覽器不支援語音播放，請改用 Safari 或 Chrome。');return}
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text);
+ u.lang=lang;
+ u.rate=Number($('voiceRate').value);
+ const voices=speechSynthesis.getVoices();
+ const preferred=voices.find(v=>v.lang.toLowerCase().startsWith(lang.toLowerCase()));
+ if(preferred)u.voice=preferred;
+ speechSynthesis.speak(u);
+}
+function speakWord(){speak(words[filtered[index]].word+'. '+words[filtered[index]].word,'en-US')}
+function speakExample(){speak(words[filtered[index]].example,'en-US')}
+function speakMeaning(){speak(words[filtered[index]].meaning,'zh-TW')}
+function speakTranslation(){speak(words[filtered[index]].translation,'zh-TW')}
+function move(n){if(!filtered.length)return;index=(index+n+filtered.length)%filtered.length;render();window.scrollTo({top:0,behavior:'smooth'})}
+function buildList(){
+ const root=$('list');root.innerHTML='';
+ filtered.forEach((wi,i)=>{
+  const w=words[wi],b=document.createElement('button');
+  b.className='item'+(i===index?' active':'');
+  const a=document.createElement('span');a.textContent=(starred.has(w.word)?'★ ':'')+w.word;
+  const m=document.createElement('small');m.textContent=w.meaning;
+  b.append(a,m);b.onclick=()=>{index=i;render();window.scrollTo({top:0,behavior:'smooth'})};root.appendChild(b);
+ });
+}
+$('search').addEventListener('input',e=>{
+ const q=e.target.value.trim().toLowerCase();
+ const current=words[filtered[index]]?.word;
+ filtered=words.map((w,i)=>({w,i})).filter(x=>(listMode==='all'||starred.has(x.w.word))&&(x.w.word+' '+x.w.meaning+' '+x.w.example+' '+x.w.translation).toLowerCase().includes(q)).map(x=>x.i);
+ const found=filtered.indexOf(words.findIndex(w=>w.word===current));
+ index=found>=0?found:0;buildList();render();
+});
+buildList();render();
+if('speechSynthesis' in window){speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices();}
+
+// 星號與小考功能：星號儲存在目前瀏覽器，重新開啟仍會保留。
+const STAR_KEY='vocab145_starred_v1';
+let starred=new Set(JSON.parse(localStorage.getItem(STAR_KEY)||'[]'));
+let listMode='all',quizItems=[],quizIndex=0,quizCorrect=0,quizAnswered=false;
+function saveStars(){localStorage.setItem(STAR_KEY,JSON.stringify([...starred]));}
+function toggleStar(){const w=words[filtered[index]];if(!w)return;if(starred.has(w.word))starred.delete(w.word);else starred.add(w.word);saveStars();updateStarButton();buildList();}
+function updateStarButton(){const w=words[filtered[index]];const b=$('starBtn');if(!b||!w)return;const yes=starred.has(w.word);b.textContent=yes?'★':'☆';b.classList.toggle('saved',yes);b.title=yes?'取消星號':'加入星號';}
+function setListMode(mode){listMode=mode;const q=$('search').value.trim().toLowerCase();filtered=words.map((w,i)=>({w,i})).filter(x=>(mode==='all'||starred.has(x.w.word))&&(x.w.word+' '+x.w.meaning+' '+x.w.example+' '+x.w.translation).toLowerCase().includes(q)).map(x=>x.i);index=0;buildList();render();}
+function startQuiz(){const pool=(listMode==='starred'?words.filter(w=>starred.has(w.word)):words);if(pool.length<2){alert('星號單字至少要有 2 個才能小考。請先加星號，或切換「全部單字」。');return;}quizItems=[...pool].sort(()=>Math.random()-.5).slice(0,Math.min(10,pool.length));quizIndex=0;quizCorrect=0;quizAnswered=false;$('quizPanel').hidden=false;showQuizQuestion();$('quizPanel').scrollIntoView({behavior:'smooth',block:'start'});}
+function showQuizQuestion(){const w=quizItems[quizIndex];$('quizFeedback').textContent='';$('quizFeedback').className='quiz-feedback';$('quizNext').disabled=true;quizAnswered=false;if(!w){$('quizProgress').textContent='小考完成';$('quizQuestion').textContent='你的成績';$('quizWord').textContent='';$('quizChoices').innerHTML=`<div class="quiz-end">${quizCorrect} / ${quizItems.length} 題答對！</div>`;$('quizScore').textContent='完成';$('quizNext').textContent='再考一次';$('quizNext').disabled=false;$('quizNext').onclick=startQuiz;return;}$('quizProgress').textContent=`第 ${quizIndex+1} / ${quizItems.length} 題`;$('quizScore').textContent=`答對 ${quizCorrect} 題`;$('quizQuestion').textContent='請選出這個英文單字的中文意思：';$('quizWord').textContent=w.word;$('quizNext').textContent='下一題 →';$('quizNext').onclick=nextQuiz;const opts=[w,...words.filter(x=>x.word!==w.word).sort(()=>Math.random()-.5).slice(0,3)].sort(()=>Math.random()-.5);$('quizChoices').innerHTML='';opts.forEach(o=>{const b=document.createElement('button');b.className='choice';b.textContent=o.meaning;b.onclick=()=>answerQuiz(b,o.word===w.word,w);$('quizChoices').appendChild(b);});}
+function answerQuiz(btn,ok,w){if(quizAnswered)return;quizAnswered=true;document.querySelectorAll('#quizChoices button').forEach(b=>{b.disabled=true;if(b.textContent===w.meaning)b.classList.add('correct');});const f=$('quizFeedback');if(ok){quizCorrect++;f.textContent='答對了！';f.classList.add('good');}else{btn.classList.add('wrong');f.textContent=`正確答案：${w.meaning}`;f.classList.add('bad');}$('quizScore').textContent=`答對 ${quizCorrect} 題`;$('quizNext').disabled=false;}
+function nextQuiz(){if(!quizAnswered)return;quizIndex++;showQuizQuestion();}
+function speakQuizWord(){const w=quizItems[quizIndex];if(w)speak(w.word,'en-US');}
+function closeQuiz(){$('quizPanel').hidden=true;$('quizNext').onclick=nextQuiz;$('quizNext').textContent='下一題 →';}
+
+</script>
+</body>
+</html>
